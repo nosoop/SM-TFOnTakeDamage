@@ -14,6 +14,13 @@ enum CritType {
 	CritType_Crit
 };
 
+/**
+ * Called before the CTFPlayer::OnTakeDamage() function is called.
+ * 
+ * Note that the crit type may be further altered after this forward (when the game calls
+ * CTFGameRules::ApplyOnDamageModifyRules(), which checks for attributes including
+ * "minicrits_become_crits").
+ */
 forward Action TF2_OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage,
 		int &damagetype, int &weapon, float damageForce[3], float damagePosition[3],
 		int damagecustom, CritType &critType);
