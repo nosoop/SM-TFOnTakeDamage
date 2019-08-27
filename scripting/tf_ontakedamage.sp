@@ -13,9 +13,9 @@
 
 #pragma newdecls required
 
-#include <dhook_takedamageinfo>
+#include <stocksoup/memory>
 
-#define PLUGIN_VERSION "1.0.1"
+#define PLUGIN_VERSION "1.0.1-inlined-reads"
 public Plugin myinfo = {
 	name = "[TF2] OnTakeDamage Hooks",
 	author = "nosoop",
@@ -23,6 +23,31 @@ public Plugin myinfo = {
 	version = PLUGIN_VERSION,
 	url = "https://github.com/nosoop/SM-TFOnTakeDamage"
 }
+
+enum eTakeDamageInfo: (+= 0x04) {
+	// vectors
+	m_DamageForce,
+	m_DamagePosition = 12,
+	m_ReportedPosition = 24,
+
+	m_Inflictor = 36,
+	m_Attacker,
+	m_Weapon,
+	m_Damage,
+	m_MaxDamage,
+	m_BaseDamage,
+	m_BitsDamageType,
+	m_DamageCustom,
+	m_DamageStats,
+	m_AmmoType,
+	m_DamagedOtherPlayers,
+	m_PlayerPenetrationCount,
+	m_DamageBonus,
+	m_DamageBonusProvider,
+	m_ForceFriendlyFire,
+	m_DamageForForce,
+	m_CritType
+};
 
 enum CritType {
 	CritType_None = 0,
@@ -49,7 +74,7 @@ public void OnPluginStart() {
 		SetFailState("Failed to create DHook for OnTakeDamage."); 
 	}
 	DHookSetFromConf(g_DHookOnTakeDamage, hGameConf, SDKConf_Virtual, "OnTakeDamage");
-	DHookAddParam(g_DHookOnTakeDamage, HookParamType_ObjectPtr, .flag = DHookPass_ByRef);
+	DHookAddParam(g_DHookOnTakeDamage, HookParamType_Int);
 	
 	g_DHookOnTakeDamageAlive = DHookCreate(0, HookType_Entity, ReturnType_Int,
 			ThisPointer_CBaseEntity);
@@ -58,7 +83,7 @@ public void OnPluginStart() {
 	}
 	DHookSetFromConf(g_DHookOnTakeDamageAlive, hGameConf, SDKConf_Virtual,
 			"OnTakeDamage_Alive");
-	DHookAddParam(g_DHookOnTakeDamageAlive, HookParamType_ObjectPtr, .flag = DHookPass_ByRef);
+	DHookAddParam(g_DHookOnTakeDamageAlive, HookParamType_Int);
 	
 	delete hGameConf;
 	
@@ -87,20 +112,25 @@ void HookTFOnTakeDamage(int client) {
 }
 
 public MRESReturn Internal_OnTakeDamage(int victim, Handle hReturn, Handle hParams) {
-	SetTakeDamageInfoContext(hParams, 1);
+	Address pTakeDamageInfo = DHookGetParam(hParams, 1);
 	
 	float damageForce[3], damagePosition[3];
-	GetDamageInfoVector(TakeDamageInfo_DamageForce, damageForce);
-	GetDamageInfoVector(TakeDamageInfo_DamagePosition, damagePosition);
+	LoadFloatVectorFromAddress(AddressOffset(pTakeDamageInfo, m_DamageForce), damageForce);
+	LoadFloatVectorFromAddress(AddressOffset(pTakeDamageInfo, m_DamagePosition),
+			damagePosition);
 	
-	int inflictor = GetDamageInfoHandle(TakeDamageInfo_Inflictor);
-	int attacker = GetDamageInfoHandle(TakeDamageInfo_Attacker);
-	int weapon = GetDamageInfoHandle(TakeDamageInfo_Weapon);
+	int inflictor = LoadEntityHandleFromAddress(AddressOffset(pTakeDamageInfo, m_Inflictor));
+	int attacker  = LoadEntityHandleFromAddress(AddressOffset(pTakeDamageInfo, m_Attacker));
+	int weapon    = LoadEntityHandleFromAddress(AddressOffset(pTakeDamageInfo, m_Weapon));
 	
-	float flDamage = GetDamageInfoFloat(TakeDamageInfo_Damage);
-	int bitsDamageType = GetDamageInfoInt(TakeDamageInfo_BitsDamageType);
-	int damagecustom = GetDamageInfoInt(TakeDamageInfo_DamageCustom);
-	int critType = GetDamageInfoInt(TakeDamageInfo_CritType);
+	float flDamage = view_as<float>(
+			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_Damage), NumberType_Int32));
+	int bitsDamageType =
+			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_BitsDamageType), NumberType_Int32);
+	int damagecustom =
+			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_DamageCustom), NumberType_Int32);
+	int critType =
+			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_CritType), NumberType_Int32);
 	
 	Action result = CallOnTakeDamage(victim, attacker, inflictor, flDamage,
 			bitsDamageType, weapon, damageForce, damagePosition, damagecustom, critType);
@@ -115,24 +145,30 @@ public MRESReturn Internal_OnTakeDamage(int victim, Handle hReturn, Handle hPara
 			}
 		}
 		
-		SetDamageInfoVector(TakeDamageInfo_DamageForce, damageForce);
-		SetDamageInfoVector(TakeDamageInfo_DamagePosition, damagePosition);
+		StoreFloatVectorToAddress(AddressOffset(pTakeDamageInfo, m_DamageForce), damageForce);
+		StoreFloatVectorToAddress(AddressOffset(pTakeDamageInfo, m_DamagePosition),
+				damagePosition);
 		
-		SetDamageInfoHandle(TakeDamageInfo_Inflictor, inflictor);
-		SetDamageInfoHandle(TakeDamageInfo_Attacker, attacker);
-		SetDamageInfoHandle(TakeDamageInfo_Weapon, weapon);
+		StoreEntityHandleToAddress(AddressOffset(pTakeDamageInfo, m_Inflictor), inflictor);
+		StoreEntityHandleToAddress(AddressOffset(pTakeDamageInfo, m_Attacker), attacker);
+		StoreEntityHandleToAddress(AddressOffset(pTakeDamageInfo, m_Weapon), weapon);
 		
-		SetDamageInfoFloat(TakeDamageInfo_Damage, flDamage);
-		SetDamageInfoInt(TakeDamageInfo_BitsDamageType, bitsDamageType);
-		SetDamageInfoInt(TakeDamageInfo_DamageCustom, damagecustom);
-		SetDamageInfoInt(TakeDamageInfo_CritType, critType);
+		StoreToAddress(AddressOffset(pTakeDamageInfo, m_Damage), view_as<int>(flDamage),
+				NumberType_Int32);
+		StoreToAddress(AddressOffset(pTakeDamageInfo, m_BitsDamageType), bitsDamageType,
+				NumberType_Int32);
+		StoreToAddress(AddressOffset(pTakeDamageInfo, m_DamageCustom), damagecustom,
+				NumberType_Int32);
+		StoreToAddress(AddressOffset(pTakeDamageInfo, m_CritType), critType,
+				NumberType_Int32);
 	}
 	return MRES_Ignored;
 }
 
 public MRESReturn Internal_OnTakeDamageAlive(int victim, Handle hReturn, Handle hParams) {
-	SetTakeDamageInfoContext(hParams, 1);
-	g_ContextCritType = GetDamageInfoInt(TakeDamageInfo_CritType);
+	Address pTakeDamageInfo = DHookGetParam(hParams, 1);
+	g_ContextCritType =
+			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_CritType), NumberType_Int32);
 }
 
 public Action OnPlayerHurt(Event event, const char[] name, bool dontBroadcast) {
@@ -164,4 +200,23 @@ Action CallOnTakeDamage(int victim, int &attacker, int &inflictor, float &damage
 	Action result;
 	Call_Finish(result);
 	return result;
+}
+
+void LoadFloatVectorFromAddress(Address addr, float vec[3]) {
+	for (int i; i < 3; i++) {
+		vec[i] = view_as<float>(LoadFromAddress(AddressOffset(addr, i * 4), NumberType_Int32));
+	}
+}
+
+void StoreFloatVectorToAddress(Address addr, const float vec[3]) {
+	for (int i; i < 3; i++) {
+		StoreToAddress(AddressOffset(addr, i * 4), view_as<int>(vec[i]), NumberType_Int32);
+	}
+}
+
+/**
+ * SourceMod retagging pain
+ */
+Address AddressOffset(Address addr, int offs) {
+	return addr + view_as<Address>(offs);
 }
