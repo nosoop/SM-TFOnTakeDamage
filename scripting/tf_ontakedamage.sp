@@ -15,7 +15,7 @@
 
 #include <stocksoup/memory>
 
-#define PLUGIN_VERSION "1.0.1-inlined-reads"
+#define PLUGIN_VERSION "1.0.2-inlined-reads"
 public Plugin myinfo = {
 	name = "[TF2] OnTakeDamage Hooks",
 	author = "nosoop",
