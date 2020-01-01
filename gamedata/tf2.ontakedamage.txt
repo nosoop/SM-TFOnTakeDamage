@@ -49,6 +49,7 @@
 				// unique xref "or_crit_vs_playercond"
 				"library"	"server"
 				"linux"		"@_ZN12CTFGameRules24ApplyOnDamageModifyRulesER15CTakeDamageInfoP11CBaseEntityb"
+				"windows"	"\x55\x8B\xEC\x81\xEC\xAC\x00\x00\x00\x56\x8B\x75\x0C"
 			}
 		}
 	}
