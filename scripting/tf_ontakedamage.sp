@@ -15,7 +15,7 @@
 
 #include <stocksoup/memory>
 
-#define PLUGIN_VERSION "1.0.2-inlined-reads"
+#define PLUGIN_VERSION "1.1.0"
 public Plugin myinfo = {
 	name = "[TF2] OnTakeDamage Hooks",
 	author = "nosoop",
@@ -57,6 +57,7 @@ enum CritType {
 
 Handle g_FwdOnTakeDamage;
 Handle g_DHookOnTakeDamage, g_DHookOnTakeDamageAlive;
+Handle g_FwdDamageModifyRules;
 
 int g_ContextCritType;
 
@@ -87,7 +88,22 @@ public void OnPluginStart() {
 	
 	delete hGameConf;
 	
+	hGameConf = LoadGameConfigFile("tf2.ontakedamage");
+	if (!hGameConf) {
+		SetFailState("Failed to load gamedata (tf2.ontakedamage).");
+	}
+	
+	Handle dtModifyRules = DHookCreateFromConf(hGameConf,
+			"CTFGameRules::ApplyOnDamageModifyRules()");
+	DHookEnableDetour(dtModifyRules, true, OnDamageModifyRules);
+	
+	delete hGameConf;
+	
 	g_FwdOnTakeDamage = CreateGlobalForward("TF2_OnTakeDamage", ET_Event,
+			Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef, Param_CellByRef,
+			Param_CellByRef, Param_Array, Param_Array, Param_Cell, Param_CellByRef);
+	
+	g_FwdDamageModifyRules = CreateGlobalForward("TF2_OnTakeDamageModifyRules", ET_Event,
 			Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef, Param_CellByRef,
 			Param_CellByRef, Param_Array, Param_Array, Param_Cell, Param_CellByRef);
 	
@@ -113,7 +129,20 @@ void HookTFOnTakeDamage(int client) {
 
 public MRESReturn Internal_OnTakeDamage(int victim, Handle hReturn, Handle hParams) {
 	Address pTakeDamageInfo = DHookGetParam(hParams, 1);
-	
+	CallTakeDamageInfoForward(g_FwdOnTakeDamage, victim, pTakeDamageInfo);
+	return MRES_Ignored;
+}
+
+public MRESReturn OnDamageModifyRules(Address pGameRules, Handle hReturn, Handle hParams) {
+	if (DHookGetReturn(hReturn) == true) {
+		Address pTakeDamageInfo = DHookGetParam(hParams, 1);
+		int victim = DHookGetParam(hParams, 2);
+		CallTakeDamageInfoForward(g_FwdDamageModifyRules, victim, pTakeDamageInfo);
+	}
+	return MRES_Ignored;
+}
+
+void CallTakeDamageInfoForward(Handle fwd, int victim, Address pTakeDamageInfo) {
 	float damageForce[3], damagePosition[3];
 	LoadFloatVectorFromAddress(AddressOffset(pTakeDamageInfo, m_DamageForce), damageForce);
 	LoadFloatVectorFromAddress(AddressOffset(pTakeDamageInfo, m_DamagePosition),
@@ -132,8 +161,20 @@ public MRESReturn Internal_OnTakeDamage(int victim, Handle hReturn, Handle hPara
 	int critType =
 			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_CritType), NumberType_Int32);
 	
-	Action result = CallOnTakeDamage(victim, attacker, inflictor, flDamage,
-			bitsDamageType, weapon, damageForce, damagePosition, damagecustom, critType);
+	Call_StartForward(fwd);
+	Call_PushCell(victim);
+	Call_PushCellRef(attacker);
+	Call_PushCellRef(inflictor);
+	Call_PushFloatRef(flDamage);
+	Call_PushCellRef(bitsDamageType);
+	Call_PushCellRef(weapon);
+	Call_PushArrayEx(damageForce, 3, SM_PARAM_COPYBACK);
+	Call_PushArrayEx(damagePosition, 3, SM_PARAM_COPYBACK);
+	Call_PushCell(damagecustom);
+	Call_PushCellRef(critType);
+	
+	Action result;
+	Call_Finish(result);
 	
 	if (result > Plugin_Continue) {
 		switch (critType) {
@@ -162,7 +203,6 @@ public MRESReturn Internal_OnTakeDamage(int victim, Handle hReturn, Handle hPara
 		StoreToAddress(AddressOffset(pTakeDamageInfo, m_CritType), critType,
 				NumberType_Int32);
 	}
-	return MRES_Ignored;
 }
 
 public MRESReturn Internal_OnTakeDamageAlive(int victim, Handle hReturn, Handle hParams) {
@@ -180,26 +220,6 @@ public Action OnPlayerHurt(Event event, const char[] name, bool dontBroadcast) {
 	event.SetInt("minicrit", 1);
 	event.SetInt("bonuseffect", 1);
 	return Plugin_Changed;
-}
-
-Action CallOnTakeDamage(int victim, int &attacker, int &inflictor, float &damage,
-		int &damagetype, int &weapon, float damageForce[3], float damagePosition[3],
-		int damagecustom, int &critType) {
-	Call_StartForward(g_FwdOnTakeDamage);
-	Call_PushCell(victim);
-	Call_PushCellRef(attacker);
-	Call_PushCellRef(inflictor);
-	Call_PushFloatRef(damage);
-	Call_PushCellRef(damagetype);
-	Call_PushCellRef(weapon);
-	Call_PushArrayEx(damageForce, 3, SM_PARAM_COPYBACK);
-	Call_PushArrayEx(damagePosition, 3, SM_PARAM_COPYBACK);
-	Call_PushCell(damagecustom);
-	Call_PushCellRef(critType);
-	
-	Action result;
-	Call_Finish(result);
-	return result;
 }
 
 void LoadFloatVectorFromAddress(Address addr, float vec[3]) {

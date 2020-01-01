@@ -25,6 +25,16 @@ forward Action TF2_OnTakeDamage(int victim, int &attacker, int &inflictor, float
 		int &damagetype, int &weapon, float damageForce[3], float damagePosition[3],
 		int damagecustom, CritType &critType);
 
+/**
+ * Called after the conditional crit modifier attributes have been applied.
+ * 
+ * At this point it seems that crit damage multipliers are finalized, so changing the `critType`
+ * will not change the damage.
+ */
+forward Action TF2_OnTakeDamageModifyRules(int victim, int &attacker, int &inflictor,
+		float &damage, int &damagetype, int &weapon, float damageForce[3],
+		float damagePosition[3], int damagecustom, CritType &critType);
+
 public SharedPlugin __pl_tf_ontakedamage = {
 	name = "tf_ontakedamage",
 	file = "tf_ontakedamage.smx",

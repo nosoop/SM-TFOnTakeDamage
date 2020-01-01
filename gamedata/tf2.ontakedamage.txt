@@ -2,6 +2,31 @@
 {
 	"tf"
 	{
+		"Functions"
+		{
+			"CTFGameRules::ApplyOnDamageModifyRules()"
+			{
+				"signature"		"CTFGameRules::ApplyOnDamageModifyRules()"
+				"callconv"		"thiscall"
+				"return"		"bool" // on false this skips the entire damage logic??
+				"this"			"address"
+				"arguments"
+				{
+					"damage_info"
+					{
+						"type"	"int"
+					}
+					"target"
+					{
+						"type"	"cbaseentity"
+					}
+					"some_bool"
+					{
+						"type"	"bool"
+					}
+				}
+			}
+		}
 		"Offsets"
 		{
 			"CTFPlayer::OnTakeDamage()"
@@ -15,6 +40,15 @@
 			{
 				// CTakeDamageInfo::SetCritType
 				"linux"		"100" // 64h
+			}
+		}
+		"Signatures"
+		{
+			"CTFGameRules::ApplyOnDamageModifyRules()"
+			{
+				// unique xref "or_crit_vs_playercond"
+				"library"	"server"
+				"linux"		"@_ZN12CTFGameRules24ApplyOnDamageModifyRulesER15CTakeDamageInfoP11CBaseEntityb"
 			}
 		}
 	}
