@@ -3,3 +3,8 @@
 
 *.smx
 
+# Ignore ninja build stuff
+# (These should be handled with configure.py)
+**/__pycache__
+build/
+build.ninja
