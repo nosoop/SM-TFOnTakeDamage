@@ -15,7 +15,7 @@
 
 #include <stocksoup/memory>
 
-#define PLUGIN_VERSION "1.1.0"
+#define PLUGIN_VERSION "1.1.1-pre"
 public Plugin myinfo = {
 	name = "[TF2] OnTakeDamage Hooks",
 	author = "nosoop",
@@ -95,6 +95,7 @@ public void OnPluginStart() {
 	
 	Handle dtModifyRules = DHookCreateFromConf(hGameConf,
 			"CTFGameRules::ApplyOnDamageModifyRules()");
+	DHookEnableDetour(dtModifyRules, false, OnDamageModifyRulesWindowsHack);
 	DHookEnableDetour(dtModifyRules, true, OnDamageModifyRules);
 	
 	delete hGameConf;
@@ -130,6 +131,17 @@ void HookTFOnTakeDamage(int client) {
 public MRESReturn Internal_OnTakeDamage(int victim, Handle hReturn, Handle hParams) {
 	Address pTakeDamageInfo = DHookGetParam(hParams, 1);
 	CallTakeDamageInfoForward(g_FwdOnTakeDamage, victim, pTakeDamageInfo);
+	return MRES_Ignored;
+}
+
+/**
+ * dumb hack to preserve argument values on windows
+ *
+ * we don't actually need to do anything in this hook, we just need to add a prehook for dhooks
+ * to preserve the input params
+ */
+public MRESReturn OnDamageModifyRulesWindowsHack(Address pGameRules, Handle hReturn,
+		Handle hParams) {
 	return MRES_Ignored;
 }
 
