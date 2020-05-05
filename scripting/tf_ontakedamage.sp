@@ -15,7 +15,7 @@
 
 #include <stocksoup/memory>
 
-#define PLUGIN_VERSION "1.1.1-pre"
+#define PLUGIN_VERSION "1.1.2-pre"
 public Plugin myinfo = {
 	name = "[TF2] OnTakeDamage Hooks",
 	author = "nosoop",
@@ -136,20 +136,26 @@ public MRESReturn Internal_OnTakeDamage(int victim, Handle hReturn, Handle hPara
 
 /**
  * dumb hack to preserve argument values on windows
- *
- * we don't actually need to do anything in this hook, we just need to add a prehook for dhooks
- * to preserve the input params
+ * we actually need to keep track of the params
  */
+static Address s_pTakeDamageInfo;
+static int s_hDamageVictim;
 public MRESReturn OnDamageModifyRulesWindowsHack(Address pGameRules, Handle hReturn,
 		Handle hParams) {
+	s_pTakeDamageInfo = DHookGetParam(hParams, 1);
+	s_hDamageVictim = DHookGetParam(hParams, 2);
 	return MRES_Ignored;
 }
 
 public MRESReturn OnDamageModifyRules(Address pGameRules, Handle hReturn, Handle hParams) {
 	if (DHookGetReturn(hReturn) == true) {
-		Address pTakeDamageInfo = DHookGetParam(hParams, 1);
-		int victim = DHookGetParam(hParams, 2);
-		CallTakeDamageInfoForward(g_FwdDamageModifyRules, victim, pTakeDamageInfo);
+		// Address pTakeDamageInfo = DHookGetParam(hParams, 1);
+		// int victim = DHookGetParam(hParams, 2);
+		// PrintToServer("pTakeDamage pre: %08x / post: %08x", s_pTakeDamageInfo, pTakeDamageInfo);
+		// PrintToServer("victim pre: %08d / post: %08d", EntRefToEntIndex(s_hDamageVictim), victim);
+		
+		CallTakeDamageInfoForward(g_FwdDamageModifyRules, EntRefToEntIndex(s_hDamageVictim),
+				s_pTakeDamageInfo);
 	}
 	return MRES_Ignored;
 }
