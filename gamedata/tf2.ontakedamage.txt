@@ -27,21 +27,6 @@
 				}
 			}
 		}
-		"Offsets"
-		{
-			"CTFPlayer::OnTakeDamage()"
-			{
-				"linux"		"63"
-				"windows"	"62"
-			}
-			
-			// CTakeDamageInfo offsets
-			"CTakeDamageInfo::m_eCritType"
-			{
-				// CTakeDamageInfo::SetCritType
-				"linux"		"100" // 64h
-			}
-		}
 		"Signatures"
 		{
 			"CTFGameRules::ApplyOnDamageModifyRules()"
