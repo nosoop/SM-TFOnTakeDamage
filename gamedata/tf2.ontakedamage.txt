@@ -51,6 +51,18 @@
 				"linux"		"@_ZN12CTFGameRules24ApplyOnDamageModifyRulesER15CTakeDamageInfoP11CBaseEntityb"
 				"windows"	"\x55\x8B\xEC\x81\xEC\xAC\x00\x00\x00\x56\x8B\x75\x0C"
 			}
+			"CTFPlayer::OnTakeDamage()"
+			{
+				"library"	"server"
+				"linux"		"@_ZN9CTFPlayer12OnTakeDamageERK15CTakeDamageInfo"
+				//"windows"	
+			}
+			"CTFPlayer::OnTakeDamage_Alive()"
+			{
+				"library"	"server"
+				"linux"		"@_ZN9CTFPlayer18OnTakeDamage_AliveERK15CTakeDamageInfo"
+				//"windows"	
+			}
 		}
 	}
 }
