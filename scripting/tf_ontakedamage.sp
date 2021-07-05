@@ -56,7 +56,7 @@ enum CritType {
 };
 
 Handle g_FwdOnTakeDamage;
-Handle g_DHookOnTakeDamage, g_DHookOnTakeDamageAlive;
+DynamicDetour g_DHookOnTakeDamage, g_DHookOnTakeDamageAlive;
 Handle g_FwdDamageModifyRules;
 
 int g_ContextCritType;
@@ -67,31 +67,22 @@ public APLRes AskPluginLoad2(Handle hPlugin, bool late, char[] error, int maxlen
 }
 
 public void OnPluginStart() {
-	Handle hGameConf = LoadGameConfigFile("sdkhooks.games/engine.ep2v");
-	
-	g_DHookOnTakeDamage = DHookCreate(0, HookType_Entity, ReturnType_Int,
-			ThisPointer_CBaseEntity);
-	if (!g_DHookOnTakeDamage) {
-		SetFailState("Failed to create DHook for OnTakeDamage."); 
-	}
-	DHookSetFromConf(g_DHookOnTakeDamage, hGameConf, SDKConf_Virtual, "OnTakeDamage");
-	DHookAddParam(g_DHookOnTakeDamage, HookParamType_Int);
-	
-	g_DHookOnTakeDamageAlive = DHookCreate(0, HookType_Entity, ReturnType_Int,
-			ThisPointer_CBaseEntity);
-	if (!g_DHookOnTakeDamageAlive) {
-		SetFailState("Failed to create DHook for OnTakeDamage_Alive."); 
-	}
-	DHookSetFromConf(g_DHookOnTakeDamageAlive, hGameConf, SDKConf_Virtual,
-			"OnTakeDamage_Alive");
-	DHookAddParam(g_DHookOnTakeDamageAlive, HookParamType_Int);
-	
-	delete hGameConf;
-	
-	hGameConf = LoadGameConfigFile("tf2.ontakedamage");
+	Handle hGameConf = LoadGameConfigFile("tf2.ontakedamage");
 	if (!hGameConf) {
 		SetFailState("Failed to load gamedata (tf2.ontakedamage).");
 	}
+	
+	g_DHookOnTakeDamage = new DynamicDetour(Address_Null, CallConv_THISCALL,
+			ReturnType_Int, ThisPointer_CBaseEntity);
+	g_DHookOnTakeDamage.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::OnTakeDamage()");
+	g_DHookOnTakeDamage.AddParam(HookParamType_Int);
+	g_DHookOnTakeDamage.Enable(Hook_Pre, Internal_OnTakeDamage);
+	
+	g_DHookOnTakeDamageAlive = new DynamicDetour(Address_Null, CallConv_THISCALL,
+			ReturnType_Int, ThisPointer_CBaseEntity);
+	g_DHookOnTakeDamageAlive.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::OnTakeDamage_Alive()");
+	g_DHookOnTakeDamageAlive.AddParam(HookParamType_Int);
+	g_DHookOnTakeDamageAlive.Enable(Hook_Pre, Internal_OnTakeDamageAlive);
 	
 	Handle dtModifyRules = DHookCreateFromConf(hGameConf,
 			"CTFGameRules::ApplyOnDamageModifyRules()");
@@ -108,23 +99,6 @@ public void OnPluginStart() {
 			Param_CellByRef, Param_Array, Param_Array, Param_Cell, Param_CellByRef);
 	
 	HookEvent("player_hurt", OnPlayerHurt, EventHookMode_Pre);
-}
-
-public void OnMapStart() {
-	for (int i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i)) {
-			HookTFOnTakeDamage(i);
-		}
-	}
-}
-
-public void OnClientPutInServer(int client) {
-	HookTFOnTakeDamage(client);
-}
-
-void HookTFOnTakeDamage(int client) {
-	DHookEntity(g_DHookOnTakeDamage, false, client, .callback = Internal_OnTakeDamage);
-	DHookEntity(g_DHookOnTakeDamageAlive, false, client, .callback = Internal_OnTakeDamageAlive);
 }
 
 public MRESReturn Internal_OnTakeDamage(int victim, Handle hReturn, Handle hParams) {
