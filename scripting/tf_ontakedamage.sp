@@ -15,7 +15,9 @@
 
 #include <stocksoup/memory>
 
-#define PLUGIN_VERSION "1.2.0"
+#include <classdefs/CTakeDamageInfo.sp>
+
+#define PLUGIN_VERSION "1.2.1"
 public Plugin myinfo = {
 	name = "[TF2] OnTakeDamage Hooks",
 	author = "nosoop",
@@ -23,37 +25,6 @@ public Plugin myinfo = {
 	version = PLUGIN_VERSION,
 	url = "https://github.com/nosoop/SM-TFOnTakeDamage"
 }
-
-enum eTakeDamageInfo: (+= 0x04) {
-	// vectors
-	m_DamageForce,
-	m_DamagePosition = 12,
-	m_ReportedPosition = 24,
-
-	m_Inflictor = 36,
-	m_Attacker,
-	m_Weapon,
-	m_Damage,
-	m_MaxDamage,
-	m_BaseDamage,
-	m_BitsDamageType,
-	m_DamageCustom,
-	m_DamageStats,
-	m_AmmoType,
-	m_DamagedOtherPlayers,
-	m_PlayerPenetrationCount,
-	m_DamageBonus,
-	m_DamageBonusProvider,
-	m_ForceFriendlyFire,
-	m_DamageForForce,
-	m_CritType
-};
-
-enum CritType {
-	CritType_None = 0,
-	CritType_MiniCrit,
-	CritType_Crit
-};
 
 Handle g_FwdOnTakeDamage;
 DynamicDetour g_DHookOnTakeDamage, g_DHookOnTakeDamageAlive;
@@ -102,38 +73,33 @@ public void OnPluginStart() {
 }
 
 public MRESReturn Internal_OnTakeDamage(int victim, Handle hReturn, Handle hParams) {
-	Address pTakeDamageInfo = DHookGetParam(hParams, 1);
-	CallTakeDamageInfoForward(g_FwdOnTakeDamage, victim, pTakeDamageInfo);
+	CTakeDamageInfo info = CTakeDamageInfo.FromAddress(DHookGetParam(hParams, 1));
+	CallTakeDamageInfoForward(g_FwdOnTakeDamage, victim, info);
 	return MRES_Ignored;
 }
 
 public MRESReturn OnDamageModifyRules(Address pGameRules, Handle hReturn, Handle hParams) {
 	if (DHookGetReturn(hReturn) == true) {
-		Address pTakeDamageInfo = DHookGetParam(hParams, 1);
+		CTakeDamageInfo info = CTakeDamageInfo.FromAddress(DHookGetParam(hParams, 1));
 		int victim = DHookGetParam(hParams, 2);
-		CallTakeDamageInfoForward(g_FwdDamageModifyRules, victim, pTakeDamageInfo);
+		CallTakeDamageInfoForward(g_FwdDamageModifyRules, victim, info);
 	}
 	return MRES_Ignored;
 }
 
-void CallTakeDamageInfoForward(Handle fwd, int victim, Address pTakeDamageInfo) {
+void CallTakeDamageInfoForward(Handle fwd, int victim, CTakeDamageInfo info) {
 	float damageForce[3], damagePosition[3];
-	LoadFloatVectorFromAddress(AddressOffset(pTakeDamageInfo, m_DamageForce), damageForce);
-	LoadFloatVectorFromAddress(AddressOffset(pTakeDamageInfo, m_DamagePosition),
-			damagePosition);
+	info.m_vecDamageForce.Get(damageForce);
+	info.m_vecDamagePosition.Get(damagePosition);
 	
-	int inflictor = LoadEntityHandleFromAddress(AddressOffset(pTakeDamageInfo, m_Inflictor));
-	int attacker  = LoadEntityHandleFromAddress(AddressOffset(pTakeDamageInfo, m_Attacker));
-	int weapon    = LoadEntityHandleFromAddress(AddressOffset(pTakeDamageInfo, m_Weapon));
+	int inflictor = EHandleToEntRef(info.m_hInflictor);
+	int attacker  = EHandleToEntRef(info.m_hAttacker);
+	int weapon    = EHandleToEntRef(info.m_hWeapon);
 	
-	float flDamage = view_as<float>(
-			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_Damage), NumberType_Int32));
-	int bitsDamageType =
-			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_BitsDamageType), NumberType_Int32);
-	int damagecustom =
-			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_DamageCustom), NumberType_Int32);
-	int critType =
-			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_CritType), NumberType_Int32);
+	float flDamage     = info.m_flDamage;
+	int bitsDamageType = info.m_bitsDamageType;
+	int damagecustom   = info.m_iDamageCustom;
+	int critType       = info.m_eCritType;
 	
 	Call_StartForward(fwd);
 	Call_PushCell(victim);
@@ -160,29 +126,23 @@ void CallTakeDamageInfoForward(Handle fwd, int victim, Address pTakeDamageInfo) 
 			}
 		}
 		
-		StoreFloatVectorToAddress(AddressOffset(pTakeDamageInfo, m_DamageForce), damageForce);
-		StoreFloatVectorToAddress(AddressOffset(pTakeDamageInfo, m_DamagePosition),
-				damagePosition);
+		info.m_vecDamageForce.Set(damageForce);
+		info.m_vecDamagePosition.Set(damagePosition);
 		
-		StoreEntityHandleToAddress(AddressOffset(pTakeDamageInfo, m_Inflictor), inflictor);
-		StoreEntityHandleToAddress(AddressOffset(pTakeDamageInfo, m_Attacker), attacker);
-		StoreEntityHandleToAddress(AddressOffset(pTakeDamageInfo, m_Weapon), weapon);
+		info.m_hInflictor = EntityToEHandle(inflictor);
+		info.m_hAttacker  = EntityToEHandle(attacker);
+		info.m_hWeapon    = EntityToEHandle(weapon);
 		
-		StoreToAddress(AddressOffset(pTakeDamageInfo, m_Damage), view_as<int>(flDamage),
-				NumberType_Int32);
-		StoreToAddress(AddressOffset(pTakeDamageInfo, m_BitsDamageType), bitsDamageType,
-				NumberType_Int32);
-		StoreToAddress(AddressOffset(pTakeDamageInfo, m_DamageCustom), damagecustom,
-				NumberType_Int32);
-		StoreToAddress(AddressOffset(pTakeDamageInfo, m_CritType), critType,
-				NumberType_Int32);
+		info.m_flDamage       = flDamage;
+		info.m_bitsDamageType = bitsDamageType,
+		info.m_iDamageCustom  = damagecustom;
+		info.m_eCritType      = critType;
 	}
 }
 
 public MRESReturn Internal_OnTakeDamageAlive(int victim, Handle hReturn, Handle hParams) {
-	Address pTakeDamageInfo = DHookGetParam(hParams, 1);
-	g_ContextCritType =
-			LoadFromAddress(AddressOffset(pTakeDamageInfo, m_CritType), NumberType_Int32);
+	CTakeDamageInfo info = CTakeDamageInfo.FromAddress(DHookGetParam(hParams, 1));
+	g_ContextCritType = info.m_eCritType;
 }
 
 public Action OnPlayerHurt(Event event, const char[] name, bool dontBroadcast) {
@@ -196,21 +156,10 @@ public Action OnPlayerHurt(Event event, const char[] name, bool dontBroadcast) {
 	return Plugin_Changed;
 }
 
-void LoadFloatVectorFromAddress(Address addr, float vec[3]) {
-	for (int i; i < 3; i++) {
-		vec[i] = view_as<float>(LoadFromAddress(AddressOffset(addr, i * 4), NumberType_Int32));
-	}
+int EHandleToEntRef(int ehandle) {
+	return ehandle | (1 << 31);
 }
 
-void StoreFloatVectorToAddress(Address addr, const float vec[3]) {
-	for (int i; i < 3; i++) {
-		StoreToAddress(AddressOffset(addr, i * 4), view_as<int>(vec[i]), NumberType_Int32);
-	}
-}
-
-/**
- * SourceMod retagging pain
- */
-Address AddressOffset(Address addr, int offs) {
-	return addr + view_as<Address>(offs);
+int EntityToEHandle(int entity) {
+	return IsValidEntity(entity)? EntIndexToEntRef(entity) & ~(1 << 31) : 0;
 }

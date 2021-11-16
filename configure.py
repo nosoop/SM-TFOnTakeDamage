@@ -5,6 +5,12 @@ plugins = [
 	'tf_ontakedamage.sp',
 ]
 
+# these are class "definitions" that are converted to methodmaps
+# see the "Build methodmap classes from templates" comment in the build.ninja configuration
+generated_classes = [
+	"CTakeDamageInfo",
+]
+
 # files to copy to builddir, relative to root
 copy_files = [
 	'gamedata/tf2.ontakedamage.txt',
@@ -16,6 +22,7 @@ copy_files = [
 include_dirs = [
 	'third_party/vendored',
 	'third_party/submodules',
+	'${builddir}/generated',
 ]
 
 # required version of spcomp (presumably pinned to SM version)
@@ -85,12 +92,31 @@ with contextlib.closing(ninja_syntax.Writer(open('build.ninja', 'wt'))) as build
 			description = 'Compiling ${out}')
 	build.newline()
 	
+	build.rule('genclass',
+			command = sys.executable + ' ${root}/misc/generate_classes.py ${template} ${definition} ${class} ${out}',
+			description = 'Generating ${out}')
+	build.newline()
+	
 	# Platform-specific copy instructions
 	if platform.system() == "Windows":
 		build.rule('copy', command = 'cmd /c copy ${in} ${out} > NUL',
 				description = 'Copying ${out}')
 	elif platform.system() == "Linux":
 		build.rule('copy', command = 'cp ${in} ${out}', description = 'Copying ${out}')
+	build.newline()
+	
+	build.comment("""Build methodmap classes from templates""")
+	class_sources = []
+	for classdef in generated_classes:
+		template_file = "${root}/scripting/templates/class.ms.sp"
+		class_definitions = "${root}/classdefs/classdefs.h"
+		
+		sp_name = os.path.splitext(classdef)[0] + '.sp'
+		sp_file = os.path.normpath(os.path.join('$builddir', 'generated', 'classdefs', sp_name))
+		
+		class_sources.extend(build.build(sp_file, 'genclass',
+				implicit = [ class_definitions, template_file, '${root}/misc/generate_classes.py' ],
+				variables = { 'template': template_file, 'definition': class_definitions, 'class': classdef }))
 	build.newline()
 	
 	build.comment("""Compile plugins specified in `plugins` list""")
@@ -100,7 +126,7 @@ with contextlib.closing(ninja_syntax.Writer(open('build.ninja', 'wt'))) as build
 		sp_file = os.path.normpath(os.path.join('$root', 'scripting', plugin))
 		
 		smx_file = os.path.normpath(os.path.join('$builddir', 'plugins', smx_plugin))
-		build.build(smx_file, 'spcomp', sp_file)
+		build.build(smx_file, 'spcomp', sp_file, order_only = class_sources)
 	build.newline()
 	
 	build.comment("""Copy plugin sources to build output""")
