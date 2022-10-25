@@ -17,7 +17,7 @@
 
 #include <classdefs/CTakeDamageInfo.sp>
 
-#define PLUGIN_VERSION "1.2.1"
+#define PLUGIN_VERSION "1.3.0"
 public Plugin myinfo = {
 	name = "[TF2] OnTakeDamage Hooks",
 	author = "nosoop",
@@ -29,6 +29,7 @@ public Plugin myinfo = {
 Handle g_FwdOnTakeDamage;
 DynamicDetour g_DHookOnTakeDamage, g_DHookOnTakeDamageAlive;
 Handle g_FwdDamageModifyRules;
+Handle g_FwdOnTakeDamagePost;
 
 int g_ContextCritType;
 
@@ -48,6 +49,7 @@ public void OnPluginStart() {
 	g_DHookOnTakeDamage.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::OnTakeDamage()");
 	g_DHookOnTakeDamage.AddParam(HookParamType_Int);
 	g_DHookOnTakeDamage.Enable(Hook_Pre, Internal_OnTakeDamage);
+	g_DHookOnTakeDamage.Enable(Hook_Post, Internal_OnTakeDamagePost);
 	
 	g_DHookOnTakeDamageAlive = new DynamicDetour(Address_Null, CallConv_THISCALL,
 			ReturnType_Int, ThisPointer_CBaseEntity);
@@ -64,6 +66,10 @@ public void OnPluginStart() {
 	g_FwdOnTakeDamage = CreateGlobalForward("TF2_OnTakeDamage", ET_Event,
 			Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef, Param_CellByRef,
 			Param_CellByRef, Param_Array, Param_Array, Param_Cell, Param_CellByRef);
+	
+	g_FwdOnTakeDamagePost = CreateGlobalForward("TF2_OnTakeDamagePost", ET_Event,
+			Param_Cell, Param_Cell, Param_Cell, Param_Float, Param_Cell,
+			Param_Cell, Param_Array, Param_Array, Param_Cell, Param_Cell);
 	
 	g_FwdDamageModifyRules = CreateGlobalForward("TF2_OnTakeDamageModifyRules", ET_Event,
 			Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef, Param_CellByRef,
@@ -84,6 +90,12 @@ public MRESReturn OnDamageModifyRules(Address pGameRules, Handle hReturn, Handle
 		int victim = DHookGetParam(hParams, 2);
 		CallTakeDamageInfoForward(g_FwdDamageModifyRules, victim, info);
 	}
+	return MRES_Ignored;
+}
+
+MRESReturn Internal_OnTakeDamagePost(int victim, Handle hReturn, Handle hParams) {
+	CTakeDamageInfo info = CTakeDamageInfo.FromAddress(DHookGetParam(hParams, 1));
+	CallTakeDamageInfoPostForward(g_FwdOnTakeDamagePost, victim, info);
 	return MRES_Ignored;
 }
 
@@ -138,6 +150,35 @@ void CallTakeDamageInfoForward(Handle fwd, int victim, CTakeDamageInfo info) {
 		info.m_iDamageCustom  = damagecustom;
 		info.m_eCritType      = critType;
 	}
+}
+
+void CallTakeDamageInfoPostForward(Handle fwd, int victim, CTakeDamageInfo info) {
+	float damageForce[3], damagePosition[3];
+	info.m_vecDamageForce.Get(damageForce);
+	info.m_vecDamagePosition.Get(damagePosition);
+	
+	int inflictor = EHandleToEntRef(info.m_hInflictor);
+	int attacker  = EHandleToEntRef(info.m_hAttacker);
+	int weapon    = EHandleToEntRef(info.m_hWeapon);
+	
+	float flDamage     = info.m_flDamage;
+	int bitsDamageType = info.m_bitsDamageType;
+	int damagecustom   = info.m_iDamageCustom;
+	int critType       = info.m_eCritType;
+	
+	Call_StartForward(fwd);
+	Call_PushCell(victim);
+	Call_PushCell(attacker);
+	Call_PushCell(inflictor);
+	Call_PushFloat(flDamage);
+	Call_PushCell(bitsDamageType);
+	Call_PushCell(weapon);
+	Call_PushArray(damageForce, 3);
+	Call_PushArray(damagePosition, 3);
+	Call_PushCell(damagecustom);
+	Call_PushCell(critType);
+	
+	Call_Finish();
 }
 
 public MRESReturn Internal_OnTakeDamageAlive(int victim, Handle hReturn, Handle hParams) {

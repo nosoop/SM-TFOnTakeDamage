@@ -25,6 +25,10 @@ forward Action TF2_OnTakeDamage(int victim, int &attacker, int &inflictor, float
 		int &damagetype, int &weapon, float damageForce[3], float damagePosition[3],
 		int damagecustom, CritType &critType);
 
+forward void TF2_OnTakeDamagePost(int victim, int attacker, int inflictor, float damage,
+		int damagetype, int weapon, const float damageForce[3], const float damagePosition[3],
+		int damagecustom, CritType critType);
+
 /**
  * Called after the conditional crit modifier attributes have been applied.
  * 
