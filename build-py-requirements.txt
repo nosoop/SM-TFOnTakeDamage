@@ -1,0 +1,2 @@
+chevron==0.14.0
+git+https://github.com/fox-it/dissect.cstruct_legacy.git # use v2
