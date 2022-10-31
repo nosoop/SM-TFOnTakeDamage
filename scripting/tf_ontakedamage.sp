@@ -17,7 +17,7 @@
 
 #include <classdefs/CTakeDamageInfo.sp>
 
-#define PLUGIN_VERSION "1.3.0"
+#define PLUGIN_VERSION "1.3.1"
 public Plugin myinfo = {
 	name = "[TF2] OnTakeDamage Hooks",
 	author = "nosoop",
@@ -141,9 +141,9 @@ void CallTakeDamageInfoForward(Handle fwd, int victim, CTakeDamageInfo info) {
 		info.m_vecDamageForce.Set(damageForce);
 		info.m_vecDamagePosition.Set(damagePosition);
 		
-		info.m_hInflictor = EntityToEHandle(inflictor);
-		info.m_hAttacker  = EntityToEHandle(attacker);
-		info.m_hWeapon    = EntityToEHandle(weapon);
+		info.m_hInflictor = EntityToEHandle(EntRefToEntIndex(inflictor));
+		info.m_hAttacker  = EntityToEHandle(EntRefToEntIndex(attacker));
+		info.m_hWeapon    = EntityToEHandle(EntRefToEntIndex(weapon));
 		
 		info.m_flDamage       = flDamage;
 		info.m_bitsDamageType = bitsDamageType,
