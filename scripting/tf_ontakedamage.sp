@@ -104,9 +104,9 @@ void CallTakeDamageInfoForward(Handle fwd, int victim, CTakeDamageInfo info) {
 	info.m_vecDamageForce.Get(damageForce);
 	info.m_vecDamagePosition.Get(damagePosition);
 	
-	int inflictor = EHandleToEntRef(info.m_hInflictor);
-	int attacker  = EHandleToEntRef(info.m_hAttacker);
-	int weapon    = EHandleToEntRef(info.m_hWeapon);
+	int inflictor = EHandleToEntIndex(info.m_hInflictor);
+	int attacker  = EHandleToEntIndex(info.m_hAttacker);
+	int weapon    = EHandleToEntIndex(info.m_hWeapon);
 	
 	float flDamage     = info.m_flDamage;
 	int bitsDamageType = info.m_bitsDamageType;
@@ -157,9 +157,9 @@ void CallTakeDamageInfoPostForward(Handle fwd, int victim, CTakeDamageInfo info)
 	info.m_vecDamageForce.Get(damageForce);
 	info.m_vecDamagePosition.Get(damagePosition);
 	
-	int inflictor = EHandleToEntRef(info.m_hInflictor);
-	int attacker  = EHandleToEntRef(info.m_hAttacker);
-	int weapon    = EHandleToEntRef(info.m_hWeapon);
+	int inflictor = EHandleToEntIndex(info.m_hInflictor);
+	int attacker  = EHandleToEntIndex(info.m_hAttacker);
+	int weapon    = EHandleToEntIndex(info.m_hWeapon);
 	
 	float flDamage     = info.m_flDamage;
 	int bitsDamageType = info.m_bitsDamageType;
@@ -197,8 +197,8 @@ public Action OnPlayerHurt(Event event, const char[] name, bool dontBroadcast) {
 	return Plugin_Changed;
 }
 
-int EHandleToEntRef(int ehandle) {
-	return ehandle | (1 << 31);
+int EHandleToEntIndex(int ehandle) {
+	return EntRefToEntIndex(ehandle | (1 << 31));
 }
 
 int EntityToEHandle(int entity) {
