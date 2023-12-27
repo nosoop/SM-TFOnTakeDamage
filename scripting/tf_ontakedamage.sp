@@ -187,11 +187,10 @@ public MRESReturn Internal_OnTakeDamageAlive(int victim, Handle hReturn, Handle 
 }
 
 public Action OnPlayerHurt(Event event, const char[] name, bool dontBroadcast) {
-	if (g_ContextCritType != 1) {
+	if (g_ContextCritType != 1 || event.GetInt("bonuseffect") != 4) {
 		return Plugin_Continue;
 	}
 	
-	event.SetInt("crit", 1);
 	event.SetInt("minicrit", 1);
 	event.SetInt("bonuseffect", 1);
 	return Plugin_Changed;
