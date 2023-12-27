@@ -17,7 +17,7 @@
 
 #include <classdefs/CTakeDamageInfo.sp>
 
-#define PLUGIN_VERSION "1.3.2"
+#define PLUGIN_VERSION "1.3.3"
 public Plugin myinfo = {
 	name = "[TF2] OnTakeDamage Hooks",
 	author = "nosoop",
