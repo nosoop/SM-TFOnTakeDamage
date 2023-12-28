@@ -63,12 +63,6 @@ methodmap {{classname}}{{#inherits}} < {{inherits}}{{/inherits}} {
 		return view_as<{{classname}}>(pInstance);
 	}
 	
-	/**
-	 * Developers may want to implement their own methods on this methodmap; they can be
-	 * automatically included here.
-	 */
-	#tryinclude "classmethods/{{classname}}.sp"
-	
 	property Address Address {
 		public get() {
 			return view_as<Address>(this);
