@@ -184,6 +184,8 @@ void CallTakeDamageInfoPostForward(Handle fwd, int victim, CTakeDamageInfo info)
 public MRESReturn Internal_OnTakeDamageAlive(int victim, Handle hReturn, Handle hParams) {
 	CTakeDamageInfo info = CTakeDamageInfo.FromAddress(DHookGetParam(hParams, 1));
 	g_ContextCritType = info.m_eCritType;
+
+	return MRES_Ignored;
 }
 
 public Action OnPlayerHurt(Event event, const char[] name, bool dontBroadcast) {
